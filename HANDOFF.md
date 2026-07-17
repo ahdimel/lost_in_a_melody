@@ -275,18 +275,20 @@ effort; everything else is minimal.
 - First run downloads model weights (Demucs, Basic Pitch) and the Salamander sample
   subset.
 
-### Bootstrap (reproduces the working Phase-1 env)
+### Bootstrap (reproduces the working env)
 ```bash
 cd lost_in_a_melody
 /opt/homebrew/bin/python3.10 -m venv .venv          # native arm64 3.10
 ./.venv/bin/python -m pip install -U pip
-./.venv/bin/python -m pip install -e .              # installs deps incl. setuptools<81
-./.venv/bin/python -m pytest tests/ -q              # 8 tests should pass
+./.venv/bin/python -m pip install -e '.[test]'      # runtime deps (incl. FastAPI/uvicorn/soundfile, setuptools<81) + test deps (pytest, httpx)
+./.venv/bin/python -m pytest tests/ -q              # 17 tests should pass
 ./.venv/bin/lam --help
+./.venv/bin/lam gui                                 # launch the browser player
 ```
 The `.venv/` is git-ignored. `brew install ffmpeg` is a prerequisite. matplotlib is a
-runtime dep (pianoroll); pytest is dev-only (`pip install pytest`). First `lam process`
-downloads Demucs + Basic Pitch weights.
+runtime dep (pianoroll); pytest + httpx (FastAPI TestClient) are the `[test]` extra.
+First `lam process` downloads Demucs + Basic Pitch weights; `lam fetch-samples`
+(optional) downloads the Salamander piano subset for "Simplified" audio.
 
 ---
 
