@@ -1,0 +1,85 @@
+/* Function-first, unstyled-but-usable (Phase 2 effort posture). The falling-note
+   canvas is the one place worth real effort; everything else is minimal. */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #e6e9ef;
+  background: #12141a;
+}
+header { padding: 20px 24px 4px; }
+h1 { margin: 0; font-size: 22px; }
+.tag { margin: 4px 0 0; color: #9aa3b2; }
+main { padding: 16px 24px 48px; max-width: 1100px; }
+h2 { font-size: 15px; margin: 0 0 12px; color: #c7cedb; }
+
+.card {
+  background: #1b1e27;
+  border: 1px solid #2a2e3a;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.hidden { display: none !important; }
+
+.row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+.row .grow { flex: 1; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9aa3b2; }
+input, select {
+  background: #0f1116; color: #e6e9ef;
+  border: 1px solid #2a2e3a; border-radius: 6px; padding: 7px 9px; font-size: 14px;
+}
+input[type="text"], input:not([type]) { min-width: 160px; }
+
+button {
+  background: #2d6cdf; color: white; border: 0; border-radius: 6px;
+  padding: 8px 14px; font-size: 14px; cursor: pointer;
+}
+button:hover { background: #3a78ea; }
+button.danger { background: #c0392b; }
+button.danger:hover { background: #d0483a; }
+button:disabled { opacity: .5; cursor: default; }
+
+.status { color: #9aa3b2; font-size: 13px; margin: 8px 0 0; min-height: 1em; }
+.status.error { color: #ff8a80; }
+.status.ok { color: #7ed492; }
+
+.log {
+  background: #0f1116; border: 1px solid #2a2e3a; border-radius: 6px;
+  padding: 10px; max-height: 180px; overflow: auto; font-size: 12px;
+  color: #b9c1d0; white-space: pre-wrap; margin: 10px 0 0;
+}
+.log:empty { display: none; }
+
+/* trim dual-range */
+.trimbar { position: relative; height: 34px; margin: 12px 0 0; }
+.trimbar input[type="range"] {
+  position: absolute; left: 0; right: 0; width: 100%; margin: 0;
+  -webkit-appearance: none; background: none; pointer-events: none; padding: 0;
+}
+.trimbar input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: #2a2e3a; border-radius: 3px; }
+.trimbar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; pointer-events: auto; width: 16px; height: 22px;
+  border-radius: 4px; background: #2d6cdf; border: 1px solid #12141a; cursor: ew-resize; margin-top: -8px;
+}
+
+/* library */
+#clipList { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+#clipList li {
+  background: #0f1116; border: 1px solid #2a2e3a; border-radius: 6px;
+  padding: 8px 12px; cursor: pointer;
+}
+#clipList li:hover { border-color: #2d6cdf; }
+#clipList li .meta { color: #9aa3b2; font-size: 12px; }
+#clipList li.unprocessed { opacity: .6; }
+
+/* player */
+.controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.toggle { display: flex; align-items: center; gap: 6px; }
+.toggle > span { font-size: 12px; color: #9aa3b2; }
+.seg { background: #0f1116; color: #c7cedb; border: 1px solid #2a2e3a; padding: 6px 10px; }
+.seg.active { background: #2d6cdf; color: white; border-color: #2d6cdf; }
+.seg:hover { border-color: #2d6cdf; }
+.clock { margin-left: auto; font-variant-numeric: tabular-nums; color: #9aa3b2; }
+#scrubber { width: 100%; margin: 0 0 8px; }
+#stage { width: 100%; height: 520px; display: block; background: #0b0d12; border-radius: 8px; }

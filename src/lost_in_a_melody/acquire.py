@@ -53,3 +53,20 @@ def acquire(source: str, out_wav: Path, *, is_url: bool,
                 raise FileNotFoundError(f"local audio not found: {raw}")
         _ffmpeg_trim(raw, out_wav, start, end)
     return out_wav
+
+
+def ingest_full(source: str, out_wav: Path, *, is_url: bool) -> Path:
+    """Fetch/normalize the WHOLE source (untrimmed) to `out_wav`.
+
+    The GUI stores this so the browser can play the full source and the owner can
+    drag a trim range over it before committing to a clip. `acquire()` (used by the
+    CLI) fetches + trims in one shot; this splits the fetch off from the trim.
+    """
+    return acquire(source, out_wav, is_url=is_url, start=None, end=None)
+
+
+def trim(src_wav: Path, out_wav: Path, start: float | None, end: float | None) -> Path:
+    """Trim an already-normalized WAV to [start, end] seconds → `out_wav`."""
+    out_wav.parent.mkdir(parents=True, exist_ok=True)
+    _ffmpeg_trim(src_wav, out_wav, start, end)
+    return out_wav

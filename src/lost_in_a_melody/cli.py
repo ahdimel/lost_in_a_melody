@@ -56,6 +56,17 @@ def cmd_list(args) -> None:
         print(name)
 
 
+def cmd_gui(args) -> None:
+    from . import server
+    server.serve(args.library, host=args.host, port=args.port,
+                 open_browser=not args.no_browser)
+
+
+def cmd_fetch_samples(args) -> None:
+    from . import samples, server
+    samples.fetch_salamander(server.WEB_ROOT)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="lam", description="Lost in a Melody")
     p.add_argument("--library", default="library", help="library root (default ./library)")
@@ -91,6 +102,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     ls = sub.add_parser("list", help="list clips")
     ls.set_defaults(func=cmd_list)
+
+    g = sub.add_parser("gui", help="launch the Phase-2 browser player")
+    g.add_argument("--host", default="127.0.0.1")
+    g.add_argument("--port", type=int, default=8765)
+    g.add_argument("--no-browser", action="store_true", help="don't auto-open a browser")
+    g.set_defaults(func=cmd_gui)
+
+    fs = sub.add_parser("fetch-samples",
+                        help="download the Salamander piano samples for the player")
+    fs.set_defaults(func=cmd_fetch_samples)
     return p
 
 

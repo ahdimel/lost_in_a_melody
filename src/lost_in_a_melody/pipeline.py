@@ -30,6 +30,43 @@ def add(lib: Library, clip_id: str, source: str, *, is_url: bool,
     return clip
 
 
+def ingest(lib: Library, clip_id: str, source: str, *, is_url: bool,
+           title: str = "", log: Log = print) -> Clip:
+    """GUI stage 1a: register a clip and fetch the WHOLE (untrimmed) source.
+
+    Unlike `add`, this defers trimming so the browser can drag a trim range over
+    the full audio first (then `trim_clip` commits it).
+    """
+    clip = lib.register(clip_id, source, is_url=is_url, title=title or clip_id)
+    log(f"ingesting full source → {clip.source_wav}")
+    _acquire.ingest_full(source, clip.source_wav, is_url=is_url)
+    log("ingested.")
+    return clip
+
+
+def trim_clip(lib: Library, clip_id: str, *, start: float | None,
+              end: float | None, log: Log = print) -> Clip:
+    """GUI stage 1b: commit a trim range → clip.wav (from the stored source.wav)."""
+    clip = lib.clip(clip_id)
+    src = clip.source_wav if clip.source_wav.exists() else clip.clip_wav
+    if not src.exists():
+        raise FileNotFoundError(f"{clip.id}: no source audio — ingest first")
+    _acquire.trim(src, clip.clip_wav, start, end)
+    meta = clip.load_meta()
+    meta.trim_start, meta.trim_end = start, end
+    clip.save_meta(meta)
+    log(f"trimmed → {clip.clip_wav} [{start}, {end}]")
+    return clip
+
+
+def audio_duration(path: Path) -> float:
+    """Length of a WAV in seconds (soundfile, already a dep)."""
+    import soundfile as sf  # lazy
+
+    info = sf.info(str(path))
+    return float(info.frames) / float(info.samplerate)
+
+
 def process(lib: Library, clip_id: str, *, stem_override: str | None = None,
             quantize: float | None = _tempo.DEFAULT_GRID,
             force_separate: bool = False, log: Log = print) -> Clip:

@@ -54,6 +54,8 @@ class Clip:
     @property
     def meta_path(self) -> Path: return self.dir / "meta.json"
     @property
+    def source_wav(self) -> Path: return self.dir / "source.wav"   # full, untrimmed (GUI)
+    @property
     def clip_wav(self) -> Path: return self.dir / "clip.wav"
     @property
     def stems_dir(self) -> Path: return self.dir / "stems"

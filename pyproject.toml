@@ -1,6 +1,6 @@
 [project]
 name = "lost-in-a-melody"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local audio-to-piano-melody guide with a Synthesia-style falling-note viewer."
 requires-python = ">=3.10,<3.11"
 dependencies = [
@@ -18,6 +18,10 @@ dependencies = [
     "numpy",
     "setuptools<81",        # resampy (via basic-pitch) still imports pkg_resources; setuptools>=81 dropped it
 ]
+
+[project.optional-dependencies]
+# Dev/test only: `pip install -e '.[test]'`. httpx backs FastAPI's TestClient.
+test = ["pytest", "httpx"]
 
 # System binaries (not pip-installable):
 #   ffmpeg      -> brew install ffmpeg        (required)

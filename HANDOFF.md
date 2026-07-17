@@ -35,8 +35,8 @@ be "good enough," not perfect. Correcting a wrong note is expected and must be c
   - **Full transcription (poly)** — all detected notes, may include chords.
 - **Output**:
   - MVP: a human-readable, hand-editable note list + a static piano-roll image.
-  - Phase 2: a GUI with a Synthesia-style falling-note player over an 88-key
-    keyboard.
+  - Phase 2 ✅ **BUILT**: a GUI with a Synthesia-style falling-note player over an
+    88-key keyboard.
 - **Local library** of clips and their processed outputs.
 - **Fully local. Nothing leaves the machine.**
 
@@ -133,13 +133,15 @@ lost_in_a_melody/
 │   ├── notes.py               # MIDI ↔ note names, 88-key (A0–C8) mapping + Note dataclass
 │   ├── render.py              # notes.txt ↔ notes.json ↔ .mid + pianoroll.png
 │   ├── library.py             # clip folders + meta.json (Clip / Meta)
-│   ├── pipeline.py            # orchestrates stages 1–5 (shared by CLI + backend)
-│   ├── server.py              # FastAPI app wrapping pipeline for the GUI  [Phase 2 — NOT BUILT]
-│   └── cli.py                 # `lam` command entrypoint
-│   # (transcribe_mono.py and server.py above are planned, not yet on disk)
-├── web/                       # Phase 2 frontend (served by the backend)
-│   ├── index.html
-│   ├── app.js                 # falling notes, keyboard, controls, toggles
+│   ├── pipeline.py            # orchestrates stages 1–5 + GUI ingest/trim/audio_duration (shared by CLI + backend)
+│   ├── server.py              # ✅ FastAPI app wrapping pipeline for the GUI (killable subprocess jobs)
+│   ├── samples.py             # ✅ Salamander subset map + `fetch-samples` downloader
+│   └── cli.py                 # `lam` command entrypoint (+ `gui`, `fetch-samples`)
+│   # (transcribe_mono.py above is optional/demoted — still not on disk)
+├── web/                       # ✅ Phase 2 frontend (served by the backend)
+│   ├── index.html            # ingest / trim / process / library / player
+│   ├── style.css             # minimal, dark, function-first
+│   ├── app.js                # falling notes, 88-key canvas, controls, toggles, Tone.js audio
 │   ├── vendor/tone.js         # bundled locally (no CDN)
 │   └── assets/samples/        # Salamander piano subset (NOT committed; fetched)
 ├── library/                   # the local data store (one folder per clip)
@@ -191,7 +193,8 @@ lam stem <id> --set other           # override stem, re-transcribe only (uses ca
 lam show <id>                        # print the note list (notes.txt)
 lam render <id>                      # re-render outputs from an edited notes.txt
 lam list                             # list clips in the library
-lam gui                              # [Phase 2 — NOT YET BUILT] FastAPI backend + browser viewer
+lam gui [--port N] [--no-browser]    # ✅ Phase 2: FastAPI backend + browser viewer (opens a browser)
+lam fetch-samples                    # ✅ download the Salamander piano samples for "Simplified" audio
 ```
 
 - A global `--library PATH` option (default `./library`) selects the data store.
@@ -329,9 +332,12 @@ specifically to keep it that way:
 - **Phase 1 — MVP (headless).** ✅ **DONE.** `pipeline.py` + `cli.py`: acquire/trim →
   separate → energy-pick stem → poly + top-of-poly melody → beat-quantize → `notes.txt`
   + `pianoroll.png`. Manual correction loop working; 8 tests pass.
-- **Phase 2 — GUI.** ⬜ **NEXT.** FastAPI backend + browser viewer: ingest, trim, process
-  (with status text + KILL), 88-key falling-note player, both toggles, Salamander/Tone.js
-  audio. `server.py` + `web/` are empty scaffolding.
+- **Phase 2 — GUI.** ✅ **DONE.** FastAPI backend (`server.py`) + browser viewer (`web/`):
+  ingest → drag-trim → process (status text + KILL), full 88-key canvas falling-note
+  player with per-pitch-class colors + active-key highlight, both toggles, Tone.js audio
+  (Salamander Sampler when `lam fetch-samples` was run, else a synth fallback). The slow
+  stage runs as a **killable subprocess of `lam process`** so headless and GUI stay in
+  lockstep. Verified end-to-end in headless Chromium against the Scarborough clip.
 
 ---
 
@@ -344,10 +350,28 @@ specifically to keep it that way:
   end-to-end on Scarborough Fair: melody matches the Hooktheory ground truth 29/29
   on pitch. See §13 for the melody `merge_gap` detail and the known Basic-Pitch
   non-determinism.
-- **Next action on pickup**: **Phase 2 — the GUI** (§8). `server.py` and everything
-  under `web/` are still empty scaffolding. The pipeline it wraps is done and stable.
-- Optional Phase-1 polish (non-blocking): expose a `--merge-gap` CLI flag, key/scale
-  detection (§12), the optional torchcrepe mono fallback module.
+- **Phase 2 GUI: COMPLETE, VERIFIED.** `server.py` + `samples.py` + `web/{index.html,
+  style.css,app.js}` built; `lam gui` / `lam fetch-samples` added. **17 tests pass**
+  (`test_core.py` 8 + `test_server.py` 9). Verified in headless Chromium: the 88-key
+  falling-note player renders, the clock/scrubber advance, keys light in pitch-class
+  colors, and both toggles work (screenshots taken). GUI deps (`fastapi`, `uvicorn`,
+  `soundfile`) + dev deps (`httpx` for TestClient) are now installed in `.venv`.
+- **Next action on pickup**: none required — Phases 0–2 are done. Optional polish below.
+- Optional polish (non-blocking): `lam fetch-samples` for real piano (else synth
+  fallback); a `--merge-gap` CLI flag; key/scale detection (§12); the optional
+  torchcrepe mono fallback module; a real drag-handle dual-range trim widget (current
+  trim is two overlaid range sliders — functional, not pretty); longer-clip paging.
+
+### How to run the GUI
+```bash
+cd lost_in_a_melody
+./.venv/bin/lam gui                 # opens http://127.0.0.1:8765 in a browser
+./.venv/bin/lam fetch-samples       # optional: real Salamander piano for "Simplified"
+```
+Tone.js is vendored at `web/vendor/tone.js` (committed, no CDN). The Salamander samples
+are git-ignored and downloaded on demand; without them "Simplified" uses a Tone.js synth.
+The slow `process` stage runs as a killable subprocess; the browser polls `GET /api/job`
+for status text and the log, and `POST /api/kill` aborts it (D10).
 
 ## 12. Open questions for later (non-blocking)
 - Longer-clip handling (paging the falling-note view / memory for multi-minute audio).

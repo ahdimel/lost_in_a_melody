@@ -7,19 +7,20 @@ rough timing, plus a Synthesia-style falling-note visualizer.
 Built for a keyboard player who can't read sheet music and corrects by ear.
 
 - **Input**: a local audio file, or a URL fetched to audio.
-- **Output**: an editable note list + piano-roll (MVP), and a falling-note GUI
-  (Phase 2).
+- **Output**: an editable note list + piano-roll (CLI), and a Synthesia-style
+  falling-note GUI over a full 88-key keyboard.
 - **Two views**: a clean single-note **melody line** and a **full transcription**,
-  toggleable.
+  toggleable — with **Original** vs browser-synthesized **Simplified** audio.
 
 See **[HANDOFF.md](HANDOFF.md)** for the full design, decisions, architecture, and
 build plan.
 
 ## Status
-**Phase 1 (headless MVP) is complete.** The full pipeline + `lam` CLI work end-to-end;
-on a validated test (Scarborough Fair) the melody line matches a Hooktheory reference
-29/29 on pitch. **Phase 2 (the falling-note GUI) is next** and not yet built. See
-[HANDOFF.md](HANDOFF.md) §11 for exact status and §13 for the Phase 0/1 findings.
+**Phases 0–2 are complete.** The headless pipeline + `lam` CLI work end-to-end (on a
+validated test, Scarborough Fair, the melody line matches a Hooktheory reference 29/29
+on pitch), and the **Phase 2 browser GUI is built and verified**: ingest → drag-trim →
+process (with status text + a KILL button), then a falling-note player with per-pitch-class
+colors and active-key highlighting. 17 tests pass. See [HANDOFF.md](HANDOFF.md) §11.
 
 ## Quickstart (macOS, Apple Silicon)
 ```bash
@@ -35,9 +36,14 @@ cd lost_in_a_melody
 ./.venv/bin/lam show mysong           # read the melody
 # correct any wrong notes by ear in notes.txt, then:
 ./.venv/bin/lam render mysong
+
+# …or drive the whole thing from the browser:
+./.venv/bin/lam gui                   # opens http://127.0.0.1:8765
+./.venv/bin/lam fetch-samples         # optional: real Salamander piano for "Simplified"
 ```
-Full CLI in HANDOFF §7. Everything runs **locally** and **native arm64** (no Rosetta).
+Full CLI in HANDOFF §7. Everything runs **locally** and **native arm64** (no Rosetta);
+Tone.js is vendored (no CDN), and the piano samples download on demand.
 
 ## Stack
 yt-dlp · ffmpeg · Demucs (`htdemucs_6s`) · Basic Pitch (ONNX) · torchcrepe · librosa ·
-pretty_midi · matplotlib — and, for Phase 2: FastAPI · Tone.js + Salamander Grand Piano V3
+pretty_midi · matplotlib · FastAPI + uvicorn · Tone.js + Salamander Grand Piano V3

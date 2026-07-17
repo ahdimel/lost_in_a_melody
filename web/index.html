@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lost in a Melody</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/vendor/tone.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Lost in a Melody</h1>
+    <p class="tag">Turn a song clip into a play-along piano guide — everything stays on your machine.</p>
+  </header>
+
+  <main>
+    <!-- 1. INGEST -->
+    <section id="ingest" class="card">
+      <h2>1 · Add a clip</h2>
+      <div class="row">
+        <label>Name <input id="name" placeholder="my-song" /></label>
+      </div>
+      <div class="row">
+        <label class="grow">URL <input id="url" placeholder="https://youtube.com/watch?v=…" /></label>
+        <button id="fetchUrl">Fetch</button>
+      </div>
+      <div class="row">
+        <label class="grow">Local file path <input id="path" placeholder="/Users/you/song.mp3" /></label>
+        <button id="loadFile">Load</button>
+      </div>
+      <p id="ingestStatus" class="status"></p>
+    </section>
+
+    <!-- 2. TRIM -->
+    <section id="trim" class="card hidden">
+      <h2>2 · Trim</h2>
+      <audio id="sourceAudio" controls></audio>
+      <div class="trimbar">
+        <input type="range" id="trimStart" min="0" max="100" value="0" step="0.1" />
+        <input type="range" id="trimEnd" min="0" max="100" value="100" step="0.1" />
+      </div>
+      <p class="status">Clip: <span id="trimLabel">0.0 – 0.0 s</span></p>
+    </section>
+
+    <!-- 3. PROCESS -->
+    <section id="process" class="card hidden">
+      <h2>3 · Process</h2>
+      <div class="row">
+        <label>Force stem
+          <select id="stem">
+            <option value="">(auto — by energy)</option>
+            <option>vocals</option><option>piano</option><option>guitar</option>
+            <option>other</option><option>bass</option><option>drums</option>
+          </select>
+        </label>
+        <button id="processBtn">Process</button>
+        <button id="killBtn" class="danger hidden">KILL</button>
+      </div>
+      <pre id="jobLog" class="log"></pre>
+    </section>
+
+    <!-- LIBRARY -->
+    <section id="library" class="card">
+      <h2>Library</h2>
+      <ul id="clipList"></ul>
+    </section>
+
+    <!-- PLAYER -->
+    <section id="player" class="card hidden">
+      <h2>Player · <span id="playerTitle"></span></h2>
+      <div class="controls">
+        <button id="playBtn">▶ Play</button>
+        <button id="resetBtn">⟲ Reset</button>
+        <div class="toggle">
+          <span>Notes</span>
+          <button data-flavor="melody" class="seg active">Melody line</button>
+          <button data-flavor="poly" class="seg">Full</button>
+        </div>
+        <div class="toggle">
+          <span>Audio</span>
+          <button data-audio="original" class="seg active">Original</button>
+          <button data-audio="simplified" class="seg">Simplified</button>
+        </div>
+        <span id="clock" class="clock">0.0s</span>
+      </div>
+      <input type="range" id="scrubber" min="0" max="100" value="0" step="0.01" />
+      <canvas id="stage"></canvas>
+      <audio id="clipAudio"></audio>
+      <p id="audioNote" class="status"></p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
