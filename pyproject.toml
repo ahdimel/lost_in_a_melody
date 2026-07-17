@@ -1,0 +1,31 @@
+[project]
+name = "lost-in-a-melody"
+version = "0.1.0"
+description = "Local audio-to-piano-melody guide with a Synthesia-style falling-note viewer."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "yt-dlp",
+    "demucs",
+    "basic-pitch[onnx]",
+    "torchcrepe",
+    "librosa",
+    "pretty_midi",
+    "fastapi",
+    "uvicorn",
+    "soundfile",
+    "numpy",
+]
+
+# System binaries (not pip-installable):
+#   ffmpeg      -> brew install ffmpeg        (required)
+#   fluidsynth  -> brew install fluidsynth    (only for the fallback synth path)
+
+[project.scripts]
+lam = "lost_in_a_melody.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

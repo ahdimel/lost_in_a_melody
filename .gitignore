@@ -1,0 +1,27 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# --- OS ---
+.DS_Store
+
+# --- Model weights / caches (downloaded on first run) ---
+models/
+.cache/
+
+# --- Bundled piano samples (downloaded via setup, too large to commit) ---
+web/assets/samples/
+
+# --- Library data: commit small text only (meta.json, notes.txt), ignore binaries ---
+library/**/clip.wav
+library/**/source.*
+library/**/stems/
+library/**/*.wav
+library/**/*.mid
+library/**/*.png
+# NOTE: library/**/meta.json and library/**/notes.txt are intentionally tracked.
