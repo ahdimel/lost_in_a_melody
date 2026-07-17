@@ -2,7 +2,7 @@
 name = "lost-in-a-melody"
 version = "0.1.0"
 description = "Local audio-to-piano-melody guide with a Synthesia-style falling-note viewer."
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.10,<3.11"
 dependencies = [
     "yt-dlp",
     "demucs",
@@ -10,15 +10,21 @@ dependencies = [
     "torchcrepe",
     "librosa",
     "pretty_midi",
+    "matplotlib",           # pianoroll.png
+    "scipy",                # median-filter smoothing (also a librosa dep)
     "fastapi",
     "uvicorn",
     "soundfile",
     "numpy",
+    "setuptools<81",        # resampy (via basic-pitch) still imports pkg_resources; setuptools>=81 dropped it
 ]
 
 # System binaries (not pip-installable):
 #   ffmpeg      -> brew install ffmpeg        (required)
 #   fluidsynth  -> brew install fluidsynth    (only for the fallback synth path)
+#
+# Python 3.10 note: Phase 0 used the installed 3.10.16 (mature arm64 wheels). Write to a
+# 3.10 baseline (no tomllib / typing.Self / exception groups).
 
 [project.scripts]
 lam = "lost_in_a_melody.cli:main"

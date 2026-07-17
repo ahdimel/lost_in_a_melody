@@ -56,11 +56,11 @@ be "good enough," not perfect. Correcting a wrong note is expected and must be c
 | D1 | Input clips are short | ~5–30s MVP; trivially expandable |
 | D2 | Accuracy bar | "Good enough" + cheap manual correction |
 | D3 | Correction mechanism | Edit a plain-text `notes.txt` file |
-| D4 | Melody source | "Whatever carries the tune" = pick a Demucs stem |
+| D4 | Melody source | "Whatever carries the tune" = pick a Demucs stem, **auto-suggested by signal ENERGY (RMS), not note count** (Phase 0). Use the **6-source `htdemucs_6s`** model for a dedicated `piano`/`guitar` stem. |
 | D5 | Locality | 100% local; a **local library** of clips + outputs |
-| D6 | Mono vs poly | Compute **both**, toggle to switch after processing |
+| D6 | Mono vs poly | Compute **both**, toggle to switch after processing. **REVISED by Phase 0**: the "melody line" is now produced by **top-of-poly extraction** (highest active note of the Basic Pitch transcription over time), which is the DEFAULT and works for both monophonic and polyphonic tune-carriers. The **torchcrepe mono path is now OPTIONAL/fallback** (it fails on polyphonic sources like piano, and top-of-poly beat it even on a mono vocal). "Poly" = the full Basic Pitch transcription. |
 | D7 | `.gitignore` policy | Commit only small text (`meta.json`, `notes.txt`); ignore audio/MIDI/PNG |
-| D8 | `notes.txt` timing units | **Beats** (tempo-relative), not seconds |
+| D8 | `notes.txt` timing units | **Beats** (tempo-relative), not seconds. **Phase 0 clarification**: absolute BPM and meter (3/4 vs 4/4) DON'T matter for playing — only the note SEQUENCE and RELATIVE durations do, and those survive a wrong tempo. So auto-detect BPM as a rough default, keep it **owner-overridable**, and **quantize GENTLY** (over-aggressive snapping is the only thing that can corrupt relative durations). Never let a wrong tempo/meter guess block anything. |
 | D9 | Piano sound | **Salamander Grand Piano V3** (CC-BY 3.0) via **Tone.js Sampler** |
 | D10 | GUI processing feedback | No real progress bar. Just status text: `processing…` → `done` / `error`, persisted until next action, plus a **KILL** button if stuck |
 | D11 | GUI architecture | Local **FastAPI backend** + browser frontend (browser can't run the ML) |
@@ -75,14 +75,15 @@ URL / file
    │  (1) ACQUIRE      yt-dlp + ffmpeg  → normalized clip.wav (trimmed to start/end)
    ▼
 clip.wav
-   │  (2) SEPARATE     Demucs (htdemucs) → stems/{vocals,drums,bass,other}.wav
+   │  (2) SEPARATE     Demucs (htdemucs_6s) → stems/{vocals,drums,bass,other,piano,guitar}.wav
    ▼
 stems/
-   │  (3) PICK STEM    suggest tune-carrier (score) + owner override
+   │  (3) PICK STEM    suggest tune-carrier by ENERGY (RMS) + owner override
    ▼
 chosen stem
-   │  (4) TRANSCRIBE   ├─ mono: torchcrepe → f0 → note segmentation → melody_mono
-   │                   └─ poly: Basic Pitch (ONNX) → MIDI            → melody_poly
+   │  (4) TRANSCRIBE   ├─ poly:   Basic Pitch (ONNX) → full note events    → melody_poly
+   │                   ├─ melody: top-of-poly (highest active note / time) → melody      [DEFAULT play-along line]
+   │                   └─ mono:   torchcrepe → f0 → segmentation           → melody_mono  [OPTIONAL/fallback only]
    ▼
 note events
    │  (5) RENDER       librosa beat grid → quantize → notes.json / notes.txt / pianoroll.png
@@ -124,9 +125,10 @@ lost_in_a_melody/
 ├── src/lost_in_a_melody/
 │   ├── acquire.py             # yt-dlp + ffmpeg → normalized, trimmed clip.wav
 │   ├── separate.py            # Demucs wrapper → stems/
-│   ├── suggest_stem.py        # score stems, recommend the tune-carrier
-│   ├── transcribe_poly.py     # Basic Pitch (ONNX) → melody_poly.{mid,json}
-│   ├── transcribe_mono.py     # torchcrepe → segmentation → melody_mono.{mid,json}
+│   ├── suggest_stem.py        # rank stems by ENERGY (RMS), recommend the tune-carrier
+│   ├── transcribe_poly.py     # Basic Pitch (ONNX) → melody_poly.{mid,json} (onset-preserving)
+│   ├── melody.py              # top-of-poly extraction → melody.{mid,json}  [DEFAULT play-along line]
+│   ├── transcribe_mono.py     # torchcrepe → segmentation → melody_mono.{mid,json}  [OPTIONAL]
 │   ├── tempo.py               # librosa beat grid + quantize-to-beats
 │   ├── notes.py               # MIDI ↔ note names, 88-key (A0–C8) mapping
 │   ├── render.py              # notes.json ↔ notes.txt, + pianoroll.png
@@ -254,7 +256,8 @@ effort; everything else is minimal.
 
 ## 9. Environment / setup (macOS, Apple Silicon)
 
-- **Python 3.11** in a project venv (best compat for Demucs / Basic Pitch / torchcrepe).
+- **Python 3.10** in a project venv (`.venv/`). *(The original plan pinned 3.11; Phase 0 used the already-installed 3.10.16 — even more mature arm64 wheel coverage, zero risk. Only caveat: write code to a 3.10 baseline — no `tomllib`, `typing.Self`, or exception groups.)*
+- **Pin `setuptools<81`** — modern setuptools dropped `pkg_resources`, which `resampy` (a Basic Pitch dep) still imports. Without this the transcribe stage crashes on import.
 - System binaries: `brew install ffmpeg` (required), `brew install fluidsynth` (only
   for the fallback synth).
 - Python deps (see `pyproject.toml`): `yt-dlp`, `demucs`, `basic-pitch[onnx]`,
@@ -315,11 +318,46 @@ specifically to keep it that way:
 ## 11. Current status
 
 - Repo initialized on `main`; remote `origin` = `git@github.com:ahdimel/lost_in_a_melody.git`
-  (SSH verified). **Nothing pushed yet.**
-- This commit contains **planning scaffold only**: `HANDOFF.md`, `README.md`,
-  `.gitignore`, `pyproject.toml`, and empty directory placeholders. **No pipeline
-  code written yet.**
-- **Next action on pickup**: Phase 0 feasibility spike.
+  (SSH verified), scoping commit `f26453d` **pushed**.
+- **Phase 0 feasibility spike: COMPLETE and PASSED** — see §13. Three plan
+  corrections + one simplification came out of it (folded into D4/D6/D8 above).
+- **Next action on pickup**: Phase 1 — the headless MVP (`pipeline.py` + `cli.py`).
+
+## 13. Phase 0 results (feasibility spike)
+
+Ran two real songs through the stack. **The native arm64 pipeline works end-to-end
+(yt-dlp → ffmpeg → Demucs/MPS → Basic Pitch/ONNX → torchcrepe); no Rosetta, no TensorFlow.**
+
+**Song 1 — VAST "Don't Take Your Love Away" (solo piano intro).** Exposed three
+wrong assumptions, now fixed in the decisions above:
+1. Pick stems by **energy (RMS)**, not note count (an empty stem is "sparse" but useless).
+2. Use **`htdemucs_6s`** (dedicated `piano` stem); the 4-stem model buries piano in `other`.
+3. **torchcrepe fails on polyphonic sources** (piano chords) → the melody line must be
+   **top-of-poly extraction**, not pitch-tracking.
+
+**Song 2 — Simon & Garfunkel "Scarborough Fair" (vocal melody), scored against a
+Hooktheory theorytab GROUND TRUTH (E Dorian):**
+- Energy pick correctly chose `vocals`.
+- **Top-of-poly matched 29/29 reference melody pitches, in order, with correct octaves**
+  (incl. an octave-up E4, octave-down D3, and a fast G3 passing tone). Only 2 spurious
+  notes. It even **beat torchcrepe-mono** (28/29 — torchcrepe smoothed away the G3).
+- **⇒ Top-of-poly is the default melody method (D6); torchcrepe demoted to optional.**
+
+**The pitch engine is near-perfect. Two Phase-1 priorities the ground-truth comparison
+exposed (NOT ceiling problems — build tasks):**
+1. **Preserve note onsets → keep repeated notes.** The reference distinguishes `E E`,
+   `B B B`; a naive same-pitch merge collapses these into one held note. **Phase 1
+   solution (`melody.py`):** segment the top line by *note identity*, not pitch (so
+   distinct onsets survive), then a **`merge_gap` (0.06 s)** heals only Basic Pitch's
+   *split sustains* (same-pitch fragments that abut within ≤~10 ms) while keeping
+   repeats separated by a real gap. On Scarborough this lands at ~30 notes (ref 35),
+   still 29/29 on pitch. NOTE: Basic Pitch is somewhat non-deterministic run-to-run
+   (fragment count varies); the merge also stabilizes this.
+2. **Meter is a non-issue for playing** (see D8) — auto-detect BPM as a default, keep it
+   owner-overridable, quantize gently.
+
+**Environment facts:** Python **3.10.16** venv at `.venv/`; **pin `setuptools<81`**;
+invoke yt-dlp as `python -m yt_dlp`. Working spike scripts were throwaway (not committed).
 
 ## 12. Open questions for later (non-blocking)
 - Longer-clip handling (paging the falling-note view / memory for multi-minute audio).

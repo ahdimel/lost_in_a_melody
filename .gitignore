@@ -24,4 +24,7 @@ library/**/stems/
 library/**/*.wav
 library/**/*.mid
 library/**/*.png
+# Derived JSON views (regenerated from notes.txt / re-processing) are not tracked.
+library/**/melody.json
+library/**/poly.json
 # NOTE: library/**/meta.json and library/**/notes.txt are intentionally tracked.
