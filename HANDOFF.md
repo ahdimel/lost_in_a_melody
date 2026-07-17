@@ -128,14 +128,15 @@ lost_in_a_melody/
 │   ├── suggest_stem.py        # rank stems by ENERGY (RMS), recommend the tune-carrier
 │   ├── transcribe_poly.py     # Basic Pitch (ONNX) → melody_poly.{mid,json} (onset-preserving)
 │   ├── melody.py              # top-of-poly extraction → melody.{mid,json}  [DEFAULT play-along line]
-│   ├── transcribe_mono.py     # torchcrepe → segmentation → melody_mono.{mid,json}  [OPTIONAL]
+│   ├── transcribe_mono.py     # torchcrepe → melody_mono  [OPTIONAL — NOT BUILT (Phase 0 demoted it)]
 │   ├── tempo.py               # librosa beat grid + quantize-to-beats
-│   ├── notes.py               # MIDI ↔ note names, 88-key (A0–C8) mapping
-│   ├── render.py              # notes.json ↔ notes.txt, + pianoroll.png
-│   ├── library.py             # clip folders + manifest management
+│   ├── notes.py               # MIDI ↔ note names, 88-key (A0–C8) mapping + Note dataclass
+│   ├── render.py              # notes.txt ↔ notes.json ↔ .mid + pianoroll.png
+│   ├── library.py             # clip folders + meta.json (Clip / Meta)
 │   ├── pipeline.py            # orchestrates stages 1–5 (shared by CLI + backend)
-│   ├── server.py              # FastAPI app wrapping pipeline for the GUI
+│   ├── server.py              # FastAPI app wrapping pipeline for the GUI  [Phase 2 — NOT BUILT]
 │   └── cli.py                 # `lam` command entrypoint
+│   # (transcribe_mono.py and server.py above are planned, not yet on disk)
 ├── web/                       # Phase 2 frontend (served by the backend)
 │   ├── index.html
 │   ├── app.js                 # falling notes, keyboard, controls, toggles
@@ -181,19 +182,25 @@ Canonical hand-editable representation. Deliberately dead-simple whitespace colu
 
 ---
 
-## 7. CLI (`lam`) — the headless path
+## 7. CLI (`lam`) — the headless path  ✅ IMPLEMENTED (Phase 1)
 
 ```
-lam add <file|--url URL> --name <id> [--bpm N] [--start S --end E]   # register + acquire + trim
-lam process <id>                    # separate + suggest stem + BOTH transcriptions + render
+lam add <file|--url URL> --name <id> [--bpm N] [--start S --end E]  # register + acquire + trim
+lam process <id> [--stem NAME] [--no-quantize]  # separate + pick stem + transcribe + render
 lam stem <id> --set other           # override stem, re-transcribe only (uses cached stems)
-lam show <id>                       # print the note list
-lam render <id>                     # re-render outputs from edited notes.txt
-lam gui                             # launch FastAPI backend + open the browser viewer
+lam show <id>                        # print the note list (notes.txt)
+lam render <id>                      # re-render outputs from an edited notes.txt
+lam list                             # list clips in the library
+lam gui                              # [Phase 2 — NOT YET BUILT] FastAPI backend + browser viewer
 ```
 
-`lam process` runs the full pipeline. Because stems are cached, changing the stem or
-nudging notes never re-runs the expensive separation.
+- A global `--library PATH` option (default `./library`) selects the data store.
+- `lam process` runs the full pipeline; `--stem` forces a tune-carrier (else energy
+  auto-suggests), `--no-quantize` keeps raw timing. Because stems are cached, changing
+  the stem or nudging notes never re-runs the expensive separation.
+- **Produced per clip:** `clip.wav`, `stems/`, `melody.{json,mid}` (the play-along
+  line), `poly.{json,mid}` (full transcription), `notes.txt` (editable), `pianoroll.png`,
+  `meta.json`. Only `meta.json` + `notes.txt` are git-tracked (D7).
 
 ---
 
@@ -265,6 +272,19 @@ effort; everything else is minimal.
 - First run downloads model weights (Demucs, Basic Pitch) and the Salamander sample
   subset.
 
+### Bootstrap (reproduces the working Phase-1 env)
+```bash
+cd lost_in_a_melody
+/opt/homebrew/bin/python3.10 -m venv .venv          # native arm64 3.10
+./.venv/bin/python -m pip install -U pip
+./.venv/bin/python -m pip install -e .              # installs deps incl. setuptools<81
+./.venv/bin/python -m pytest tests/ -q              # 8 tests should pass
+./.venv/bin/lam --help
+```
+The `.venv/` is git-ignored. `brew install ffmpeg` is a prerequisite. matplotlib is a
+runtime dep (pianoroll); pytest is dev-only (`pip install pytest`). First `lam process`
+downloads Demucs + Basic Pitch weights.
+
 ---
 
 ## 9b. Apple Silicon / no-Rosetta constraint
@@ -304,24 +324,35 @@ specifically to keep it that way:
 
 ## 10. Phased build plan
 
-- **Phase 0 — Feasibility spike (½ day).** One real song: yt-dlp → Demucs →
-  Basic Pitch → open the MIDI. Confirms the quality ceiling before building anything.
-- **Phase 1 — MVP (headless).** `pipeline.py` + `cli.py`: acquire/trim → separate →
-  suggest+pick stem → both transcriptions → beat-quantize → `notes.txt` +
-  `pianoroll.png`. Manual correction loop working.
-- **Phase 2 — GUI.** FastAPI backend + browser viewer: ingest, trim, process (with
-  status text + KILL), 88-key falling-note player, both toggles, Salamander/Tone.js
-  audio.
+- **Phase 0 — Feasibility spike.** ✅ **DONE** (see §13). Confirmed the quality ceiling
+  and corrected three scoping assumptions before any code.
+- **Phase 1 — MVP (headless).** ✅ **DONE.** `pipeline.py` + `cli.py`: acquire/trim →
+  separate → energy-pick stem → poly + top-of-poly melody → beat-quantize → `notes.txt`
+  + `pianoroll.png`. Manual correction loop working; 8 tests pass.
+- **Phase 2 — GUI.** ⬜ **NEXT.** FastAPI backend + browser viewer: ingest, trim, process
+  (with status text + KILL), 88-key falling-note player, both toggles, Salamander/Tone.js
+  audio. `server.py` + `web/` are empty scaffolding.
 
 ---
 
 ## 11. Current status
 
-- Repo initialized on `main`; remote `origin` = `git@github.com:ahdimel/lost_in_a_melody.git`
-  (SSH verified), scoping commit `f26453d` **pushed**.
-- **Phase 0 feasibility spike: COMPLETE and PASSED** — see §13. Three plan
-  corrections + one simplification came out of it (folded into D4/D6/D8 above).
-- **Next action on pickup**: Phase 1 — the headless MVP (`pipeline.py` + `cli.py`).
+- Repo `origin` = `git@github.com:ahdimel/lost_in_a_melody.git` (SSH verified).
+- **Phase 0 feasibility spike: COMPLETE and PASSED** — see §13.
+- **Phase 1 headless MVP: COMPLETE, VERIFIED, COMMITTED.** All 11 `src/` modules
+  built, `lam` CLI working (§7), 8 unit tests pass (`tests/test_core.py`). Verified
+  end-to-end on Scarborough Fair: melody matches the Hooktheory ground truth 29/29
+  on pitch. See §13 for the melody `merge_gap` detail and the known Basic-Pitch
+  non-determinism.
+- **Next action on pickup**: **Phase 2 — the GUI** (§8). `server.py` and everything
+  under `web/` are still empty scaffolding. The pipeline it wraps is done and stable.
+- Optional Phase-1 polish (non-blocking): expose a `--merge-gap` CLI flag, key/scale
+  detection (§12), the optional torchcrepe mono fallback module.
+
+## 12. Open questions for later (non-blocking)
+- Longer-clip handling (paging the falling-note view / memory for multi-minute audio).
+- Key/scale detection to snap corrections to a scale (nice-to-have).
+- Whether to expose the auto-suggested stem confidence in the GUI.
 
 ## 13. Phase 0 results (feasibility spike)
 
@@ -358,10 +389,4 @@ exposed (NOT ceiling problems — build tasks):**
 
 **Environment facts:** Python **3.10.16** venv at `.venv/`; **pin `setuptools<81`**;
 invoke yt-dlp as `python -m yt_dlp`. Working spike scripts were throwaway (not committed).
-
-## 12. Open questions for later (non-blocking)
-- Longer-clip handling (paging the falling-note view / memory for multi-minute audio).
-- Key/scale detection to snap corrections to a scale (nice-to-have).
-- Whether to expose the auto-suggested stem confidence in the GUI.
-```
 
