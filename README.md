@@ -26,7 +26,7 @@ colors and active-key highlighting. 17 tests pass. See [HANDOFF.md](HANDOFF.md) 
 ```bash
 brew install ffmpeg
 cd lost_in_a_melody
-/opt/homebrew/bin/python3.10 -m venv .venv
+/opt/homebrew/bin/python3.11 -m venv .venv          # brew install python@3.11
 ./.venv/bin/python -m pip install -U pip && ./.venv/bin/python -m pip install -e .
 
 # fetch + trim a clip, then transcribe it
@@ -47,3 +47,10 @@ Tone.js is vendored (no CDN), and the piano samples download on demand.
 ## Stack
 yt-dlp · ffmpeg · Demucs (`htdemucs_6s`) · Basic Pitch (ONNX) · torchcrepe · librosa ·
 pretty_midi · matplotlib · FastAPI + uvicorn · Tone.js + Salamander Grand Piano V3
+
+## Security audit (2026-10-23)
+
+Dependencies were checked against [OSV.dev](https://osv.dev); nothing malicious was found. The
+project moved from Python 3.10 to 3.11 so Pillow could be upgraded to 13.0 (critical fixes), and
+the venv was rebuilt. Python 3.12+ is not an option while basic-pitch needs TensorFlow there. See
+[HANDOFF.md](HANDOFF.md) §9.

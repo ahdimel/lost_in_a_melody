@@ -266,7 +266,7 @@ effort; everything else is minimal.
 
 ## 9. Environment / setup (macOS, Apple Silicon)
 
-- **Python 3.10** in a project venv (`.venv/`). *(The original plan pinned 3.11; Phase 0 used the already-installed 3.10.16 — even more mature arm64 wheel coverage, zero risk. Only caveat: write code to a 3.10 baseline — no `tomllib`, `typing.Self`, or exception groups.)*
+- **Python 3.11** in a project venv (`.venv/`). *(Phases 0–2 were built on 3.10.16; moved to 3.11 on 2026-10-23 because Pillow 13, which carries critical security fixes, needs 3.11+. Do not go to 3.12+: on macOS, basic-pitch 0.4.0 requires `tensorflow-macos<2.15.1` for Python > 3.11, which has no wheels there, so the install cannot resolve.)*
 - **Pin `setuptools<81`** — modern setuptools dropped `pkg_resources`, which `resampy` (a Basic Pitch dep) still imports. Without this the transcribe stage crashes on import.
 - System binaries: `brew install ffmpeg` (required), `brew install fluidsynth` (only
   for the fallback synth).
@@ -278,7 +278,7 @@ effort; everything else is minimal.
 ### Bootstrap (reproduces the working env)
 ```bash
 cd lost_in_a_melody
-/opt/homebrew/bin/python3.10 -m venv .venv          # native arm64 3.10
+/opt/homebrew/bin/python3.11 -m venv .venv          # native arm64 3.11 (brew install python@3.11)
 ./.venv/bin/python -m pip install -U pip
 ./.venv/bin/python -m pip install -e '.[test]'      # runtime deps (incl. FastAPI/uvicorn/soundfile, setuptools<81) + test deps (pytest, httpx)
 ./.venv/bin/python -m pytest tests/ -q              # 17 tests should pass
@@ -318,9 +318,9 @@ specifically to keep it that way:
 | Tone.js + Salamander samples | n/a | browser-side, architecture-independent |
 
 **Install-time hygiene (not design changes):**
-- **Keep the Python 3.11 pin.** `numba`/`llvmlite` (via librosa) can lag on the
-  newest Python; 3.11 has full arm64 wheel coverage. Avoid bleeding-edge 3.13,
-  where you'd risk a source build.
+- **Keep the Python 3.11 pin** (`requires-python = ">=3.11,<3.12"`). On 3.12+,
+  basic-pitch pulls in `tensorflow-macos`, which has no wheels there; on 3.10,
+  Pillow is stuck on 12.x with unfixed critical advisories.
 - **Install into an arm64 toolchain** — arm64 Homebrew (`/opt/homebrew`) + arm64
   Python. Sanity checks: `python3 -c "import platform; print(platform.machine())"`
   → `arm64`, and `file $(which ffmpeg)` → `arm64`.
@@ -346,6 +346,11 @@ specifically to keep it that way:
 ## 11. Current status
 
 - Repo `origin` = `git@github.com:ahdimel/lost_in_a_melody.git` (SSH verified).
+- **Security audit (2026-10-23):** dependencies checked against OSV.dev; nothing malicious.
+  The venv was rebuilt on Python 3.11 to get Pillow 13 (critical fixes) and certifi
+  2026.10.19 (compromised CAs removed). 17 tests pass, and Scarborough re-processes to the
+  same 30-note melody. `setuptools` 80.x still has moderate advisories; the `<81` pin stays
+  until resampy stops importing `pkg_resources`.
 - **Phase 0 feasibility spike: COMPLETE and PASSED** — see §13.
 - **Phase 1 headless MVP: COMPLETE, VERIFIED, COMMITTED.** All 11 `src/` modules
   built, `lam` CLI working (§7), 8 unit tests pass (`tests/test_core.py`). Verified
@@ -413,6 +418,6 @@ exposed (NOT ceiling problems — build tasks):**
 2. **Meter is a non-issue for playing** (see D8) — auto-detect BPM as a default, keep it
    owner-overridable, quantize gently.
 
-**Environment facts:** Python **3.10.16** venv at `.venv/`; **pin `setuptools<81`**;
+**Environment facts:** Python **3.10.16** venv at `.venv/` during Phase 0 (now 3.11, see §9); **pin `setuptools<81`**;
 invoke yt-dlp as `python -m yt_dlp`. Working spike scripts were throwaway (not committed).
 

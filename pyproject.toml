@@ -2,7 +2,7 @@
 name = "lost-in-a-melody"
 version = "0.2.0"
 description = "Local audio-to-piano-melody guide with a Synthesia-style falling-note viewer."
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "yt-dlp",
     "demucs",
@@ -27,8 +27,9 @@ test = ["pytest", "httpx"]
 #   ffmpeg      -> brew install ffmpeg        (required)
 #   fluidsynth  -> brew install fluidsynth    (only for the fallback synth path)
 #
-# Python 3.10 note: Phase 0 used the installed 3.10.16 (mature arm64 wheels). Write to a
-# 3.10 baseline (no tomllib / typing.Self / exception groups).
+# Python 3.11 note: moved from 3.10 on 2026-10-23 (Pillow 13's security fixes need 3.11+).
+# Stay below 3.12: on macOS, basic-pitch 0.4.0 requires tensorflow-macos for Python > 3.11, and
+# that has no wheels past 3.11.
 
 [project.scripts]
 lam = "lost_in_a_melody.cli:main"
