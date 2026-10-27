@@ -70,6 +70,7 @@ button:disabled { opacity: .5; cursor: default; }
   padding: 8px 12px; cursor: pointer;
 }
 #clipList li:hover { border-color: #2d6cdf; }
+#clipList li.active { border-color: #2d6cdf; background: #16203a; }
 #clipList li .meta { color: #9aa3b2; font-size: 12px; }
 #clipList li.unprocessed { opacity: .6; }
 

@@ -54,3 +54,19 @@ Dependencies were checked against [OSV.dev](https://osv.dev); nothing malicious 
 project moved from Python 3.10 to 3.11 so Pillow could be upgraded to 13.0 (critical fixes), and
 the venv was rebuilt. Python 3.12+ is not an option while basic-pitch needs TensorFlow there. See
 [HANDOFF.md](HANDOFF.md) §9.
+
+## Web demo (2026-10-26)
+
+https://ahdimel.com/lost-in-a-melody/ plays two pre-processed clips in the browser, with no server.
+`web/app.js` has a static demo mode for this: a page that sets `window.LAM_DEMO = { base }` gets the
+library and player only, reading `clips.json`, `clips/<id>.json`, `clips/<id>.mp3` and `samples/`
+from `base` instead of the API. Without it, the local GUI is unchanged. The site's
+`tools/import_melody_demo.py` (in `~/Documents/vscode/ahdimel_com`) builds those files from
+`library/amazing-grace` and `library/greensleeves`. Both are freely licensed Wikimedia Commons
+recordings; `meta.json` records the source URL.
+
+Found while choosing demo clips: on solo-piano recordings `htdemucs_6s` sometimes splits the piano
+across the `piano`/`other` (or `guitar`/`other`) stems. The top-of-poly melody then loses notes
+(Für Elise, Gymnopédie No. 1), and concert-band winds came out unusable (Ode to Joy).
+Also, `transcribe_poly` calls Basic Pitch without a model path, so on macOS it runs the CoreML
+model, not ONNX as HANDOFF describes.

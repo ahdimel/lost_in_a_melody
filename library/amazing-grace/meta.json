@@ -1,0 +1,13 @@
+{
+  "id": "amazing-grace",
+  "source": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Amazing_Grace_%28vocalist_with_guitar%29_-_Southern_Aire_-_United_States_Air_Force_Reserve_Band.mp3",
+  "is_url": true,
+  "title": "Amazing Grace",
+  "trim_start": 4.0,
+  "trim_end": 42.5,
+  "bpm": 74.9,
+  "key": null,
+  "stem": "vocals",
+  "mode": "melody",
+  "transpose": 0
+}

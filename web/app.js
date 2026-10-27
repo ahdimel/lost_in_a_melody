@@ -6,14 +6,35 @@
  *
  * Everything is local: original audio is the backend clip.wav; "simplified" audio is
  * synthesized in the browser with Tone.js (Salamander Sampler if the samples were
- * fetched, else a plain synth) so audio and animation share one clock. */
+ * fetched, else a plain synth) so audio and animation share one clock.
+ *
+ * Static demo mode: a page that sets `window.LAM_DEMO = { base: "/some/dir/" }` before
+ * loading this script gets the library + player only, reading pre-processed clips from
+ * static files under `base` (clips.json, clips/<id>.json, clips/<id>.mp3, samples/)
+ * instead of the backend. No ingest, trim or process. */
 "use strict";
 
+const DEMO = window.LAM_DEMO || null;
+
+// API path → its pre-built file in demo mode (same payloads as server.py).
+function staticPath(p) {
+  if (p === "/api/clips") return "clips.json";
+  let m = p.match(/^\/api\/clip\/([^/]+)$/);
+  if (m) return `clips/${m[1]}.json`;
+  m = p.match(/^\/api\/clip\/([^/]+)\/audio$/);
+  if (m) return `clips/${m[1]}.mp3`;
+  throw new Error(`no static file for ${p}`);
+}
+const url = (p) => DEMO ? DEMO.base + staticPath(p) : p;
+
 const $ = (id) => document.getElementById(id);
-const api = (p, opts) => fetch(p, opts).then(async (r) => {
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-  return r.json();
-});
+const api = (p, opts) => {
+  if (DEMO && p === "/api/status") return Promise.resolve({ have_samples: true });
+  return fetch(url(p), opts).then(async (r) => {
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    return r.json();
+  });
+};
 
 // ── 88-key geometry (A0=21 … C8=108) ─────────────────────────────────────────
 const MIN = 21, MAX = 108;
@@ -141,11 +162,13 @@ async function refreshLibrary() {
   clips.forEach((c) => {
     const li = document.createElement("li");
     if (!c.processed) li.className = "unprocessed";
-    li.innerHTML = `<div>${c.id}</div><div class="meta">${c.processed ?
+    li.dataset.id = c.id;
+    li.innerHTML = `<div>${c.title || c.id}</div><div class="meta">${c.processed ?
       `${c.stem || "?"} · ${c.bpm || "?"} bpm` : "not processed"}</div>`;
     li.onclick = () => c.processed ? loadClip(c.id) : openTrimFor(c.id);
     ul.appendChild(li);
   });
+  return clips;
 }
 async function openTrimFor(id) {
   const d = await api(`/api/clip/${id}`);
@@ -154,17 +177,19 @@ async function openTrimFor(id) {
 }
 
 // ── load a processed clip into the player ─────────────────────────────────────
-async function loadClip(id) {
+async function loadClip(id, scroll = true) {
   const d = await api(`/api/clip/${id}`);
   if (!d.processed) return;
   state.clipId = id;
   state.data = d;
   $("player").classList.remove("hidden");
   $("playerTitle").textContent = `${d.meta.title} — ${d.meta.stem || "?"} @ ${d.meta.bpm || "?"} bpm`;
-  $("clipAudio").src = `/api/clip/${id}/audio`;
+  $("clipAudio").src = url(`/api/clip/${id}/audio`);
+  document.querySelectorAll("#clipList li").forEach((li) =>
+    li.classList.toggle("active", li.dataset.id === id));
   setFlavor(state.flavor);
   resetPlayback();
-  $("player").scrollIntoView({ behavior: "smooth" });
+  if (scroll) $("player").scrollIntoView({ behavior: "smooth" });
 }
 
 function flavorNotes(d, flavor) {
@@ -232,7 +257,8 @@ function ensureTone() {
     for (let o = 1; o <= 7; o++) for (const p of ["A", "C", "D#", "F#"])
       urls[`${p}${o}`] = `${p.replace("#", "s")}${o}.mp3`;
     urls["C8"] = "C8.mp3";
-    instrument = new Tone.Sampler({ urls, baseUrl: "/assets/samples/" }).toDestination();
+    const baseUrl = DEMO ? DEMO.base + "samples/" : "/assets/samples/";
+    instrument = new Tone.Sampler({ urls, baseUrl }).toDestination();
   } else {
     instrument = new Tone.PolySynth(Tone.Synth).toDestination();
   }
@@ -369,12 +395,14 @@ function setAudioMode(mode) {
 
 // ── wire up ─────────────────────────────────────────────────────────────────
 function init() {
-  $("fetchUrl").onclick = () => ingest("url");
-  $("loadFile").onclick = () => ingest("file");
-  $("trimStart").oninput = updateTrimLabel;
-  $("trimEnd").oninput = updateTrimLabel;
-  $("processBtn").onclick = startProcess;
-  $("killBtn").onclick = killJob;
+  if (!DEMO) {                            // the demo page has no ingest/trim/process cards
+    $("fetchUrl").onclick = () => ingest("url");
+    $("loadFile").onclick = () => ingest("file");
+    $("trimStart").oninput = updateTrimLabel;
+    $("trimEnd").oninput = updateTrimLabel;
+    $("processBtn").onclick = startProcess;
+    $("killBtn").onclick = killJob;
+  }
   $("playBtn").onclick = togglePlay;
   $("resetBtn").onclick = resetPlayback;
   $("scrubber").oninput = (e) => seek(+e.target.value);
@@ -386,6 +414,8 @@ function init() {
   resizeCanvas();
   requestAnimationFrame(frame);
   api("/api/status").then((s) => { state.haveSamples = s.have_samples; });
-  refreshLibrary();
+  refreshLibrary().then((clips) => {
+    if (DEMO && clips.length) loadClip(clips[0].id, false);   // open on the first demo clip
+  });
 }
 init();

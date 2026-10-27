@@ -1,0 +1,13 @@
+{
+  "id": "greensleeves",
+  "source": "https://upload.wikimedia.org/wikipedia/commons/8/83/Greensleeves_for_solo_piano.wav",
+  "is_url": true,
+  "title": "Greensleeves",
+  "trim_start": 0.0,
+  "trim_end": 41.0,
+  "bpm": 136.0,
+  "key": null,
+  "stem": "piano",
+  "mode": "melody",
+  "transpose": 0
+}
